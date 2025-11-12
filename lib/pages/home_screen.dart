@@ -1,10 +1,14 @@
 import 'dart:convert';
+import 'dart:ui' as html;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tutor_chat/model/message.dart';
 import 'package:tutor_chat/pages/components/message_box.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
+
 
 import '../model/student_data.dart';
 
@@ -172,6 +176,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadInitialData();
+
+    // final studentId = getStudentIdFromUrl(); // Lê a URL
+    //
+    // if (studentId != null) {
+    //   // 1. Se o ID estiver na URL (2ª execução), inicia a busca de dados
+    //   _loadInitialData(studentId);
+    // } else {
+    //   // 2. Se o ID não estiver na URL (1ª execução), redireciona para o login
+    //   redirectToPhpLogin();
+    // }
   }
 
   @override
@@ -217,8 +231,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final paddingHorizontal = screenWidth * 0.05;
-
-    final List<String> videoTitles = ["Lista Ligada (1/3)", "Lista Ligada (2/3)", "Lista Ligada (3/3)"];
 
     return Scaffold(
       appBar: AppBar(
@@ -271,7 +283,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               children: [
                 Icon(Icons.emoji_events),
-                Text(" Progresso : ${_progressPercentage}%", style: GoogleFonts.lexendDeca(fontSize: 14)),
+                Text(" Progresso : $_progressPercentage%", style: GoogleFonts.lexendDeca(fontSize: 14)),
               ],
             ),
           ),
@@ -494,6 +506,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     setState(() {
                                                       lesson.viewStatus = lesson.viewStatus == 1 ? 0 : 1;
                                                       calculateProgress();
+                                                      //TODO : ENVIA DADOS PARA O BACK DE ALAN
+                                                      sendProgressUpdate();
                                                     });
 
                                                     sendProgressUpdate();
@@ -630,5 +644,30 @@ class _HomeScreenState extends State<HomeScreen> {
     // } catch (e) {
     //   print('Erro de rede ao enviar progresso: $e');
     // }
+  }
+
+  String? getStudentIdFromUrl() {
+    if (kIsWeb) {
+      final uri = Uri.base;
+
+      final studentId = uri.queryParameters['student_id'];
+
+      return studentId;
+    }
+    return null;
+  }
+
+
+
+  void redirectToPhpLogin() async {
+    const String phpLoginUrl = 'https://plataforma-alan.com/login';
+
+    final Uri url = Uri.parse(phpLoginUrl);
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.platformDefault);
+    } else {
+      print('Não foi possível abrir $phpLoginUrl');
+    }
   }
 }
