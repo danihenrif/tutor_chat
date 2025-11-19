@@ -1,10 +1,12 @@
-import 'package:tutor_chat/model/lesson.dart';
+import 'lesson.dart';
 
 class Module {
+  final String moduleId;
   final String moduleName;
   final List<Lesson> lessons;
 
   Module({
+    required this.moduleId,
     required this.moduleName,
     required this.lessons,
   });
@@ -17,6 +19,7 @@ class Module {
     ).toList();
 
     return Module(
+      moduleId: json['module_id'] ?? '',
       moduleName: json['module_name'] as String,
       lessons: lessons,
     );
@@ -24,6 +27,7 @@ class Module {
 
   Map<String, dynamic> toJson() {
     return {
+      'module_id': moduleId,
       'nome_modulo': moduleName,
       'aulas': lessons.map((l) => l.toJson()).toList(),
     };

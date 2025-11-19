@@ -1,11 +1,13 @@
-import 'package:tutor_chat/model/module.dart';
+import 'module.dart';
 
 class StudentData {
   final String studentId;
+  final String? courseId;
   final List<Module> modules;
 
   StudentData({
     required this.studentId,
+    this.courseId,
     required this.modules,
   });
 
@@ -19,7 +21,17 @@ class StudentData {
 
     return StudentData(
       studentId: json['student_id'] as String,
+      courseId: json['course_id'] as String?, // 🔑 Mapeando course_id
       modules: modules,
     );
+  }
+
+
+  Map<String, dynamic> toJson() {
+    return {
+      'student_id': studentId,
+      'course_id': courseId,
+      'modulos': modules.map((m) => m?.toJson()).toList(),
+    };
   }
 }

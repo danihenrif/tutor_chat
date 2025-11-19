@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:ui' as html;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -7,8 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:tutor_chat/model/message.dart';
 import 'package:tutor_chat/pages/components/message_box.dart';
 import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
-
+import 'package:tutor_chat/pages/video.dart';
+import 'package:youtube_player_iframe/youtube_player_iframe.dart' show YoutubePlayerController, YoutubePlayerParams, YoutubePlayer;
 
 import '../model/student_data.dart';
 
@@ -23,140 +22,69 @@ class _HomeScreenState extends State<HomeScreen> {
   final String mockJsonString = '''
 {
   "student_id": "98765",
+  "course_id": "edb-01",
   "modules": [
     {
       "module_name": "Estruturas Fundamentais",
+      "module_id": "mod-1",
       "lessons": [
         {
           "lesson_name": "Pilhas e Filas",
-          "video_link": "https://mock.link/pilhas",
-          "view_status": 1
+          "video_link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          "view_status": 1,
+          "lesson_id": "L1"
         },
         {
           "lesson_name": "Listas Ligadas",
-          "video_link": "https://mock.link/listas",
-          "view_status": 1
+          "video_link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          "view_status": 1,
+          "lesson_id": "L2"
         }
       ]
     },
     {
       "module_name": "Árvores Binárias",
+      "module_id": "mod-2",
       "lessons": [
         {
           "lesson_name": "Conceitos Básicos de Árvores",
-          "video_link": "https://mock.link/arvores/conceitos",
-          "view_status": 0
+          "video_link": "https://www.youtube.com/watch?v=GxUUJ-CQpmg",
+          "view_status": 0,
+          "lesson_id": "L3"
         },
         {
           "lesson_name": "Busca em Largura (BFS)",
-          "video_link": "https://mock.link/bfs",
-          "view_status": 0
-        }
-      ]
-    },
-    {
-      "module_name": "Busca e Hash",
-      "lessons": [
-        {
-          "lesson_name": "Tabelas Hash e Colisões",
-          "video_link": "https://mock.link/hash/tabelas",
-          "view_status": 0
-        },
-        {
-          "lesson_name": "Busca Binária Otimizada",
-          "video_link": "https://mock.link/busca/binaria",
-          "view_status": 0
-        }
-      ]
-    },
-    {
-      "module_name": "Grafos e Redes",
-      "lessons": [
-        {
-          "lesson_name": "Representação de Grafos",
-          "video_link": "https://mock.link/grafos/rep",
-          "view_status": 0
-        },
-        {
-          "lesson_name": "Algoritmo de Dijkstra",
-          "video_link": "https://mock.link/grafos/dijkstra",
-          "view_status": 0
+          "video_link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          "view_status": 0,
+          "lesson_id": "L4"
         }
       ]
     },
     {
       "module_name": "Algoritmos de Ordenação",
+      "module_id": "mod-3",
       "lessons": [
         {
           "lesson_name": "Merge Sort",
-          "video_link": "https://mock.link/ordenacao/merge",
-          "view_status": 1
-        },
-        {
-          "lesson_name": "Quick Sort",
-          "video_link": "https://mock.link/ordenacao/quick",
-          "view_status": 0
-        }
-      ]
-    },
-    {
-      "module_name": "Árvores Avançadas",
-      "lessons": [
-        {
-          "lesson_name": "Árvores AVL",
-          "video_link": "https://mock.link/avl",
-          "view_status": 0
-        },
-        {
-          "lesson_name": "Árvores B+",
-          "video_link": "https://mock.link/bmais",
-          "view_status": 0
-        }
-      ]
-    },
-    {
-      "module_name": "Programação Dinâmica",
-      "lessons": [
-        {
-          "lesson_name": "Introdução e Memoização",
-          "video_link": "https://mock.link/dp/intro",
-          "view_status": 0
-        },
-        {
-          "lesson_name": "Problema da Mochila",
-          "video_link": "https://mock.link/dp/mochila",
-          "view_status": 0
-        }
-      ]
-    },
-    {
-      "module_name": "Complexidade e P/NP",
-      "lessons": [
-        {
-          "lesson_name": "Notação Big O ()",
-          "video_link": "https://mock.link/bigo",
-          "view_status": 1
-        },
-        {
-          "lesson_name": "Classes P e NP",
-          "video_link": "https://mock.link/pnp",
-          "view_status": 0
-        }
-      ]
-    },
-    {
-      "module_name": "Tópicos Especiais",
-      "lessons": [
-        {
-          "lesson_name": "Estruturas de Dados Persistentes",
-          "video_link": "https://mock.link/persistentes",
-          "view_status": 0
+          "video_link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          "view_status": 0,
+          "lesson_id": "L5"
         }
       ]
     }
   ]
 }
 ''';
+
+  final YoutubePlayerController _youtubeController = YoutubePlayerController(
+    params: const YoutubePlayerParams(
+      showControls: true,
+      showFullscreenButton: true,
+      mute: false,
+    ),
+  );
+
+  bool _isVideoSelected = false;
 
   final questionController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -176,22 +104,14 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadInitialData();
-
-    // final studentId = getStudentIdFromUrl(); // Lê a URL
-    //
-    // if (studentId != null) {
-    //   // 1. Se o ID estiver na URL (2ª execução), inicia a busca de dados
-    //   _loadInitialData(studentId);
-    // } else {
-    //   // 2. Se o ID não estiver na URL (1ª execução), redireciona para o login
-    //   redirectToPhpLogin();
-    // }
+    // final studentId = getStudentIdFromUrl();
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
     questionController.dispose();
+    _youtubeController.close();
     super.dispose();
   }
 
@@ -387,16 +307,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(10.0),
                   boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10.0, offset: Offset(0, 5))],
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Padding(padding: const EdgeInsets.only(bottom: 8.0), child: Icon(Icons.ondemand_video, size: 60)),
-                    Text(
-                      "Nenhum vídeo selecionado",
-                      style: GoogleFonts.lexendDeca(fontSize: 24, fontWeight: FontWeight.bold),
-                    ),
-                    Text("Escolha uma aula da playlist para começar", style: GoogleFonts.lexendDeca(fontSize: 14)),
-                  ],
+                child: Video(
+                  isSomeVideoSelected: _isVideoSelected,
+                  youtubeController: _youtubeController,
                 ),
               ),
             ),
@@ -456,7 +369,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   GestureDetector(
                                     onTap: () {
                                       setState(() {
-                                        isMinimized = !isMinimized; // Toggle logic
+                                        isMinimized = !isMinimized;
                                       });
                                     },
                                     child: Text("—", style: GoogleFonts.lexendDeca(fontSize: 16)),
@@ -507,19 +420,19 @@ class _HomeScreenState extends State<HomeScreen> {
                                                       lesson.viewStatus = lesson.viewStatus == 1 ? 0 : 1;
                                                       calculateProgress();
                                                       //TODO : ENVIA DADOS PARA O BACK DE ALAN
-                                                      sendProgressUpdate();
                                                     });
-
-                                                    sendProgressUpdate();
+                                                    sendProgressUpdate(lesson.lessonId, lesson.viewStatus);
                                                   },
                                                 ),
-                                                title: Text(
-                                                  '${lesson.lessonName}',
-                                                  style: GoogleFonts.lexendDeca(fontSize: 14),
+                                                title: GestureDetector(
+                                                  child: Text(
+                                                    '${lesson.lessonName}',
+                                                    style: GoogleFonts.lexendDeca(fontSize: 14),
+                                                  ),
+                                                  onTap: () {
+                                                    _playVideo(lesson.videoLink);
+                                                  },
                                                 ),
-                                                onTap: () {
-                                                  print('Abrir vídeo: ${lesson.videoLink}');
-                                                },
                                               ),
                                             );
                                           }
@@ -607,7 +520,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Message(
             creationDate: DateTime.now().toIso8601String(),
             message:
-                '👋 Olá ${studentData!.studentId}! Bem-vindo ao RoboEdu! Selecione uma aula na playlist ao lado ou me pergunte sobre o conteúdo do curso. Estou aqui para ajudar! 🎓',
+                '👋 Olá ! Bem-vindo ao RoboEdu! Selecione uma aula na playlist ao lado ou me pergunte sobre o conteúdo do curso. Estou aqui para ajudar! 🎓',
             sender: SenderType.bot,
           ),
         ];
@@ -622,28 +535,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void sendProgressUpdate() {
+  Future<void> sendProgressUpdate(String lessonId, int status) async {
     if (studentData == null) return;
 
-    final progressPayload = {
-      'aluno_id': studentData!.studentId,
-      'modulos': studentData!.modules.map((m) => m.toJson()).toList(),
-    };
+    final progressPayload = {'student_id': studentData!.studentId, 'lesson_id': lessonId, 'visto': status};
 
-    // 2. Envia para o seu Backend (nova rota: /update-progress)
-    // try {
-    //   final response = await http.post(
-    //     Uri.parse('http://127.0.0.1:5000/update-progress'),
-    //     headers: {'Content-Type': 'application/json'},
-    //     body: jsonEncode(progressPayload),
-    //   );
-    //
-    //   if (response.statusCode != 200) {
-    //     print('Erro ao enviar progresso: ${response.body}');
-    //   }
-    // } catch (e) {
-    //   print('Erro de rede ao enviar progresso: $e');
-    // }
+    final url = Uri.parse('http://127.0.0.1:5000/update-progress');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(progressPayload),
+      );
+
+      if (response.statusCode == 200) {
+        print('Progresso enviado com sucesso!');
+      } else {
+        print('Erro ao enviar progresso: ${response.body}');
+      }
+    } catch (e) {
+      print('Erro de rede ao enviar progresso: $e');
+    }
   }
 
   String? getStudentIdFromUrl() {
@@ -657,17 +570,23 @@ class _HomeScreenState extends State<HomeScreen> {
     return null;
   }
 
-
-
-  void redirectToPhpLogin() async {
-    const String phpLoginUrl = 'https://plataforma-alan.com/login';
-
-    final Uri url = Uri.parse(phpLoginUrl);
-
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.platformDefault);
-    } else {
-      print('Não foi possível abrir $phpLoginUrl');
+  void _playVideo(String url) {
+    String? id;
+    Uri uri = Uri.parse(url);
+    if (uri.queryParameters.containsKey('v')) {
+      id = uri.queryParameters['v'];
+    } else if (url.contains('youtu.be/')) {
+      id = url.split('youtu.be/')[1];
     }
+
+    if (id == null) {
+      print("URL Inválida");
+      return;
+    }
+
+    setState(() {
+      _isVideoSelected = true;
+      _youtubeController.loadVideoById(videoId: id!);
+    });
   }
 }
