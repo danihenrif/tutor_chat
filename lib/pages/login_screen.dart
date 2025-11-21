@@ -47,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> registerUser() async {
     try {
-      final url = Uri.parse('http://localhost:3000/api/student');
+      final url = Uri.parse('http://127.0.0.1:5000/register-student');
       final name = _textController.text;
       final accountPayload = {'student_id': name.toLowerCase(), 'name': name};
 

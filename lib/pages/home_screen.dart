@@ -449,8 +449,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadInitialData() async {
-    final url = Uri.parse('http://localhost:3000/api/course/edb-01/student/1');
-    final url2 = Uri.parse('http://localhost:3000/api/course/edb-01/student/${widget.user.id}/lessons/viewed');
+    final url = Uri.parse('http://127.0.0.1:5000/student-data/1');
+    final url2 = Uri.parse('http://127.0.0.1:5000/get-viewed-lessons/${widget.user.id}');
 
     try {
       final responses = await Future.wait([
@@ -492,7 +492,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> completeOrIncompleteLesson(lessonId, status) async {
     try {
-      final url = Uri.parse('http://localhost:3000/api/course/edb-01/student/${widget.user.id}/progress');
+      final url = Uri.parse('http://127.0.0.1:5000/update-progress/${widget.user.id}');
 
       final response = await http.post(
         url,
