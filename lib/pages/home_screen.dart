@@ -7,82 +7,32 @@ import 'package:tutor_chat/model/message.dart';
 import 'package:tutor_chat/pages/components/message_box.dart';
 import 'package:http/http.dart' as http;
 import 'package:tutor_chat/pages/video.dart';
-import 'package:youtube_player_iframe/youtube_player_iframe.dart' show YoutubePlayerController, YoutubePlayerParams, YoutubePlayer;
+import 'package:youtube_player_iframe/youtube_player_iframe.dart'
+    show YoutubePlayerController, YoutubePlayerParams, YoutubePlayer;
 
-import '../model/student_data.dart';
+import '../model/User.dart';
+import '../model/ViewedLessonsSumary.dart';
+import '../model/course_data.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final User user;
+
+  const HomeScreen({super.key, required this.user});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final String mockJsonString = '''
-{
-  "student_id": "98765",
-  "course_id": "edb-01",
-  "modules": [
-    {
-      "module_name": "Estruturas Fundamentais",
-      "module_id": "mod-1",
-      "lessons": [
-        {
-          "lesson_name": "Pilhas e Filas",
-          "video_link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-          "view_status": 1,
-          "lesson_id": "L1"
-        },
-        {
-          "lesson_name": "Listas Ligadas",
-          "video_link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-          "view_status": 1,
-          "lesson_id": "L2"
-        }
-      ]
-    },
-    {
-      "module_name": "Árvores Binárias",
-      "module_id": "mod-2",
-      "lessons": [
-        {
-          "lesson_name": "Conceitos Básicos de Árvores",
-          "video_link": "https://www.youtube.com/watch?v=GxUUJ-CQpmg",
-          "view_status": 0,
-          "lesson_id": "L3"
-        },
-        {
-          "lesson_name": "Busca em Largura (BFS)",
-          "video_link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-          "view_status": 0,
-          "lesson_id": "L4"
-        }
-      ]
-    },
-    {
-      "module_name": "Algoritmos de Ordenação",
-      "module_id": "mod-3",
-      "lessons": [
-        {
-          "lesson_name": "Merge Sort",
-          "video_link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-          "view_status": 0,
-          "lesson_id": "L5"
-        }
-      ]
-    }
-  ]
-}
-''';
 
   final YoutubePlayerController _youtubeController = YoutubePlayerController(
-    params: const YoutubePlayerParams(
-      showControls: true,
-      showFullscreenButton: true,
-      mute: false,
-    ),
+    params: const YoutubePlayerParams(showControls: true, showFullscreenButton: true, mute: false),
   );
+
+  CourseData? loadedCourseData;
+  ViewedLessonsSummary? loadedLessonsSummary;
+
+  Set<String> _viewedLessonIds = {};
 
   bool _isVideoSelected = false;
 
@@ -90,8 +40,6 @@ class _HomeScreenState extends State<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
   bool isMinimized = false;
 
-  StudentData? studentData;
-  bool isLoadingCourse = true;
   String? errorMessage;
 
   int _totalLessonsCount = 0;
@@ -104,7 +52,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadInitialData();
-    // final studentId = getStudentIdFromUrl();
   }
 
   @override
@@ -116,22 +63,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void calculateProgress() {
-    if (studentData == null || studentData!.modules.isEmpty) {
+    if (loadedCourseData == null) {
+      setState(() {
+        _totalLessonsCount = 0;
+        _completedLessonsCount = 0;
+        _progressPercentage = 0;
+      });
       return;
     }
 
     int totalLessons = 0;
-    int completedLessons = 0;
-
-    for (var module in studentData!.modules) {
-      for (var lesson in module.lessons) {
-        totalLessons++;
-
-        if (lesson.viewStatus == 1) {
-          completedLessons++;
-        }
-      }
+    for (var module in loadedCourseData!.modules) {
+      totalLessons += module.lessons.length;
     }
+
+    int completedLessons = _viewedLessonIds.length;
 
     double progressPercentage = 0.0;
     if (totalLessons > 0) {
@@ -145,6 +91,10 @@ class _HomeScreenState extends State<HomeScreen> {
       _completedLessonsCount = completedLessons;
       _progressPercentage = roundedPercentage;
     });
+
+    if (kDebugMode) {
+      print('Progresso Calculado: $roundedPercentage% (${completedLessons}/${totalLessons})');
+    }
   }
 
   @override
@@ -176,14 +126,6 @@ class _HomeScreenState extends State<HomeScreen> {
             child: const Center(child: Icon(Icons.android_outlined, size: 32, color: Colors.white)),
           ),
         ),
-        // leading: Padding(
-        //   padding: EdgeInsets.only(left : paddingHorizontal),
-        //   child: Icon(Icons.android_outlined, size: 48),
-        // ),
-        // leading: Padding(
-        //   padding: EdgeInsets.only(left: paddingHorizontal),
-        //   child: Image.asset('lib/assets/capelo.png'),
-        // ),
         title: Padding(
           padding: EdgeInsets.only(left: 12),
           child: Column(
@@ -307,10 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(10.0),
                   boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10.0, offset: Offset(0, 5))],
                 ),
-                child: Video(
-                  isSomeVideoSelected: _isVideoSelected,
-                  youtubeController: _youtubeController,
-                ),
+                child: Video(isSomeVideoSelected: _isVideoSelected, youtubeController: _youtubeController),
               ),
             ),
             //Playist
@@ -377,72 +316,77 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ],
                               ),
                             ),
-                            // CONTEÚDO DINÂMICO
+                            //CONTEÚDO DINÂMICO
                             Expanded(
-                              child: isLoadingCourse
-                                  ? const Center(child: CircularProgressIndicator())
-                                  : errorMessage != null
-                                  ? Center(child: Text(errorMessage!))
-                                  : Builder(
-                                      builder: (context) {
-                                        List<Widget> displayWidgets = [];
+                              child: Builder(
+                                builder: (context) {
+                                  if (loadedCourseData?.modules == null) {
+                                    return const Center(child: Text("Nenhum módulo encontrado."));
+                                  }
 
-                                        if (studentData == null || studentData!.modules.isEmpty) {
-                                          return const Center(child: Text("Nenhum módulo encontrado."));
-                                        }
+                                  List<Widget> displayWidgets = [];
 
-                                        for (var module in studentData!.modules) {
-                                          displayWidgets.add(
-                                            Padding(
-                                              padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 5.0),
-                                              child: Text(
-                                                module.moduleName.toUpperCase(),
-                                                style: GoogleFonts.lexendDeca(
-                                                  fontWeight: FontWeight.w800,
-                                                  fontSize: 14,
-                                                  color: Theme.of(context).primaryColor,
-                                                ),
+                                  for (var module in loadedCourseData!.modules) {
+                                    displayWidgets.add(
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 5.0),
+                                        child: Text(
+                                          module.title.toUpperCase(),
+                                          style: GoogleFonts.lexendDeca(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 14,
+                                            color: Theme.of(context).primaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+
+                                    for (var lesson in module.lessons) {
+                                      final bool isViewed = _viewedLessonIds.contains(lesson.lessonId);
+
+                                      displayWidgets.add(
+                                        ListTile(
+                                          contentPadding: const EdgeInsets.only(left: 20.0, right: 8.0),
+
+                                          leading: GestureDetector(
+                                            child: Icon(
+                                              isViewed ? Icons.check_circle : Icons.circle_outlined,
+                                              color: isViewed ? Colors.green : Colors.grey,
+                                            ),
+                                            onTap: () {
+                                              setState(() {
+                                                isViewed
+                                                    ? _viewedLessonIds.remove(lesson.lessonId)
+                                                    : _viewedLessonIds.add(lesson.lessonId);
+                                                calculateProgress();
+                                              });
+
+                                              final String newStatus = isViewed ? 'nao visto' : 'visto';
+                                              completeOrIncompleteLesson(lesson.lessonId, newStatus);
+                                            },
+                                          ),
+
+                                          title: GestureDetector(
+                                            child: Text(
+                                              lesson.title,
+                                              style: GoogleFonts.lexendDeca(
+                                                fontSize: 14,
+                                                color: isViewed ? Colors.black54 : Colors.black,
                                               ),
                                             ),
-                                          );
+                                            onTap: () {
+                                              _playVideo(lesson.videoUrl);
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    }
 
-                                          for (var lesson in module.lessons) {
-                                            displayWidgets.add(
-                                              ListTile(
-                                                contentPadding: const EdgeInsets.only(left: 20.0, right: 8.0),
-                                                leading: GestureDetector(
-                                                  child: Icon(
-                                                    lesson.viewStatus == 1 ? Icons.check_circle : Icons.circle_outlined,
-                                                    color: lesson.viewStatus == 1 ? Colors.green : Colors.grey,
-                                                  ),
-                                                  onTap: () {
-                                                    setState(() {
-                                                      lesson.viewStatus = lesson.viewStatus == 1 ? 0 : 1;
-                                                      calculateProgress();
-                                                      //TODO : ENVIA DADOS PARA O BACK DE ALAN
-                                                    });
-                                                    sendProgressUpdate(lesson.lessonId, lesson.viewStatus);
-                                                  },
-                                                ),
-                                                title: GestureDetector(
-                                                  child: Text(
-                                                    '${lesson.lessonName}',
-                                                    style: GoogleFonts.lexendDeca(fontSize: 14),
-                                                  ),
-                                                  onTap: () {
-                                                    _playVideo(lesson.videoLink);
-                                                  },
-                                                ),
-                                              ),
-                                            );
-                                          }
-                                          displayWidgets.add(
-                                            const Divider(height: 20, thickness: 1, color: Colors.black12),
-                                          );
-                                        }
-                                        return ListView(children: displayWidgets);
-                                      },
-                                    ),
+                                    displayWidgets.add(const Divider(height: 20, thickness: 1, color: Colors.black12));
+                                  }
+                                  return ListView(children: displayWidgets);
+                                },
+                              ),
                             ),
                           ],
                         ),
@@ -470,12 +414,12 @@ class _HomeScreenState extends State<HomeScreen> {
         final response = await http.post(
           Uri.parse('http://127.0.0.1:5000/chat'),
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'pergunta': trimmedText}), // Use trimmedText!
+          body: jsonEncode({'pergunta': trimmedText}),
         );
         setState(() {
           if (response.statusCode == 200) {
             final data = jsonDecode(response.body);
-            final botResponse = data['resposta']; // Assumindo que a resposta JSON tem a chave 'resposta'
+            final botResponse = data['resposta'];
 
             messages.add(
               Message(creationDate: DateTime.now().toIso8601String(), message: botResponse, sender: SenderType.bot),
@@ -504,70 +448,66 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<StudentData> loadMockDataSimple() async {
-    final decodedJson = json.decode(mockJsonString);
-    return StudentData.fromJson(decodedJson);
-  }
-
   Future<void> _loadInitialData() async {
+    final url = Uri.parse('http://localhost:3000/api/course/edb-01/student/1');
+    final url2 = Uri.parse('http://localhost:3000/api/course/edb-01/student/${widget.user.id}/lessons/viewed');
+
     try {
-      final data = await loadMockDataSimple();
+      final responses = await Future.wait([
+        http.get(url, headers: {'Content-Type': 'application/json'}),
+        http.get(url2, headers: {'Content-Type': 'application/json'}),
+      ]);
 
-      setState(() {
-        studentData = data;
-        isLoadingCourse = false;
-        messages = [
-          Message(
-            creationDate: DateTime.now().toIso8601String(),
-            message:
-                '👋 Olá ! Bem-vindo ao RoboEdu! Selecione uma aula na playlist ao lado ou me pergunte sobre o conteúdo do curso. Estou aqui para ajudar! 🎓',
-            sender: SenderType.bot,
-          ),
-        ];
-      });
+      final response1 = responses[0];
+      final response2 = responses[1];
 
-      calculateProgress();
+      if (response1.statusCode == 200 && response2.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse1 = json.decode(response1.body);
+        final Map<String, dynamic> courseDataJson = jsonResponse1['course_data'] as Map<String, dynamic>;
+        loadedCourseData = CourseData.fromJson(courseDataJson);
+
+        final Map<String, dynamic> jsonResponse2 = json.decode(response2.body);
+        loadedLessonsSummary = ViewedLessonsSummary.fromJson(jsonResponse2);
+
+        setState(() {
+          _viewedLessonIds = loadedLessonsSummary!.viewedLessons.toSet();
+          messages = [
+            Message(
+              creationDate: DateTime.now().toIso8601String(),
+              message:
+                  '👋 Olá ${widget.user.name} ! Bem-vindo ao RoboEdu! Selecione uma aula na playlist ao '
+                  'lado ou me pergunte sobre o conteúdo do curso. Estou aqui para ajudar! 🎓',
+              sender: SenderType.bot,
+            ),
+          ];
+        });
+        calculateProgress();
+      } else {
+        print('Falha na requisição. Status 1: ${response1.statusCode}, Status 2: ${response2.statusCode}');
+      }
     } catch (e) {
-      setState(() {
-        errorMessage = 'Falha ao carregar dados do Mock: ${e.toString()}';
-        isLoadingCourse = false;
-      });
+      print('❌ Erro durante o carregamento dos dados: $e');
     }
   }
 
-  Future<void> sendProgressUpdate(String lessonId, int status) async {
-    if (studentData == null) return;
-
-    final progressPayload = {'student_id': studentData!.studentId, 'lesson_id': lessonId, 'visto': status};
-
-    final url = Uri.parse('http://127.0.0.1:5000/update-progress');
-
+  Future<void> completeOrIncompleteLesson(lessonId, status) async {
     try {
+      final url = Uri.parse('http://localhost:3000/api/course/edb-01/student/${widget.user.id}/progress');
+
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(progressPayload),
+        body: jsonEncode({"lesson_id": lessonId, "status": status}),
       );
 
-      if (response.statusCode == 200) {
-        print('Progresso enviado com sucesso!');
-      } else {
-        print('Erro ao enviar progresso: ${response.body}');
+      if (response.statusCode != 200 && kDebugMode) {
+        print('Erro ao atualizar progresso no backend: ${response.statusCode}');
       }
     } catch (e) {
-      print('Erro de rede ao enviar progresso: $e');
+      if (kDebugMode) {
+        print('Erro de rede ao atualizar progresso: $e');
+      }
     }
-  }
-
-  String? getStudentIdFromUrl() {
-    if (kIsWeb) {
-      final uri = Uri.base;
-
-      final studentId = uri.queryParameters['student_id'];
-
-      return studentId;
-    }
-    return null;
   }
 
   void _playVideo(String url) {

@@ -1,30 +1,22 @@
 class Lesson {
   final String lessonId;
-  final String lessonName;
-  final String videoLink;
-  int viewStatus;
+  final String title;
+  final String videoUrl;
+  final int pedagogicalId;
 
   Lesson({
     required this.lessonId,
-    required this.lessonName,
-    required this.videoLink,
-    required this.viewStatus,
+    required this.title,
+    required this.videoUrl,
+    required this.pedagogicalId,
   });
 
   factory Lesson.fromJson(Map<String, dynamic> json) {
     return Lesson(
-      lessonId: json['lesson_id'] ?? '',
-      lessonName: json['lesson_name'] as String,
-      videoLink: json['video_link'] as String,
-      viewStatus: json['view_status'] as int,
+      lessonId: json['lesson_id'] as String,
+      title: json['title'] as String,
+      videoUrl: json['video_url'] as String,
+      pedagogicalId: json['pedagogical_id'] as int,
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'lesson_id': lessonId,
-      'nome_aula': lessonName,
-      'visto': viewStatus,
-    };
   }
 }

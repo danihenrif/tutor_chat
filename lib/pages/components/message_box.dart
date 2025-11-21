@@ -45,21 +45,6 @@ class _MessageBoxState extends State<MessageBox> {
             child: Padding(
               padding: const EdgeInsets.all(10.0),
               child: Text(widget.message.message),
-              // AnimatedTextKit(
-              //   animatedTexts: [
-              //     TypewriterAnimatedText(
-              //       widget.message.message,
-              //       textAlign: TextAlign.start,
-              //       textStyle: TextStyle(
-              //         fontSize: 14.0,
-              //         fontWeight: FontWeight.w300,
-              //         color: Colors.black,
-              //       ),
-              //       speed: const Duration(milliseconds: 35),
-              //     ),
-              //   ],
-              //   isRepeatingAnimation: false,
-              // ),
             ),
           ),
         ),
