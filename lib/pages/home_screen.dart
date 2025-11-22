@@ -449,7 +449,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadInitialData() async {
-    final url = Uri.parse('http://127.0.0.1:5000/student-data/1');
+    final url = Uri.parse('http://127.0.0.1:5000/course-data/${widget.user.id}');
     final url2 = Uri.parse('http://127.0.0.1:5000/get-viewed-lessons/${widget.user.id}');
 
     try {
